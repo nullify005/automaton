@@ -14,6 +14,7 @@ k8s {{ name }} install:
         rm ${TEMP}
 {% endfor %}
 
+{#
 {% for name,items in salt.pillar.get('cfssl:binaries').items() %}
 cfssl {{ name }} install:
   cmd.run:
@@ -173,3 +174,4 @@ k8s admin config:
 
         kubectl config use-context default \
           --kubeconfig={{ etc }}/admin.conf
+#}

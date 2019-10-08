@@ -1,0 +1,18 @@
+{
+  "unique": "ABC123",
+  "timestamp": "2019-09-26T22:28:25.757Z",
+  "you": "me",
+  "@timestamp": "2019-09-26T22:28:25.757Z",
+  "headers": {
+    "content_type": "application/x-www-form-urlencoded",
+    "http_version": "HTTP/1.1",
+    "request_path": "/",
+    "http_host": "127.0.0.1:8080",
+    "http_accept": "*/*",
+    "request_method": "POST",
+    "content_length": "13",
+    "http_user_agent": "curl/7.54.0"
+  },
+  "host": "172.19.0.1",
+  "@version": "1"
+}
