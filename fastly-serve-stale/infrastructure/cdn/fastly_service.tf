@@ -6,11 +6,11 @@ resource "fastly_service_v1" "www" {
   for_each = var.sites
 
   activate        = tobool(var.activate)
-  version_comment = "${var.version_comment}"
+  version_comment = "testing"
   force_destroy   = false
-  comment         = "https://bitbucket.org/ffxblue/service-cdn-render-web/"
+  comment         = "fastly-serve-stale"
   default_ttl     = 10
-  name            = "render-web [${each.key}] [${terraform.workspace}]"
+  name            = "fastly-serve-stale [${each.key}]"
 
   # Configure backends/origins...
   dynamic "backend" {
@@ -25,23 +25,13 @@ resource "fastly_service_v1" "www" {
       error_threshold       = 0
       first_byte_timeout    = 15000
       max_conn              = 200
-      port                  = 443
+      port                  = 80
       healthcheck           = "Varnish Health - ${each.key}"
-      ssl_cert_hostname     = "*.ffxblue.com.au"
-      ssl_check_cert        = true
-      use_ssl               = true
+      # ssl_cert_hostname     = "*.ffxblue.com.au"
+      # ssl_check_cert        = true
+      use_ssl               = false
       weight                = 100
     }
-  }
-
-  # Always create a <brand>-<env>.ffxblue.com.au...
-  domain {
-    name = "${each.key}-${terraform.workspace}.ffxblue.com.au"
-  }
-
-  # Always create a <brand>-<env>.cdn.9pub.io...
-  domain {
-    name = "${each.key}-${terraform.workspace}.cdn.9pub.io"
   }
 
   dynamic "domain" {
@@ -66,44 +56,6 @@ resource "fastly_service_v1" "www" {
     threshold         = var.health_threshold
     timeout           = 5000
     window            = var.health_window
-  }
-
-  ###########################################################
-
-  # Pre-production restrictions...
-
-  dictionary { name = "ffxauth" }
-  acl { name = "trustedhost" }
-
-  condition {
-    name      = "Auth Cookie not set on non-www"
-    priority  = 5
-    statement = "req.http.host !~ \"^www\\.\" && !req.http.ffxauth"
-    type      = "REQUEST"
-  }
-
-  dynamic "snippet" {
-    for_each = terraform.workspace != "production" ? [1] : []
-
-    content {
-      content  = file("${path.module}/vcl_snippets/recv_ffxauth.vcl")
-      name     = "ffxauth"
-      priority = 1
-      type     = "recv"
-    }
-  }
-
-  dynamic "response_object" {
-    for_each = terraform.workspace != "production" ? [1] : []
-
-    content {
-      content           = file("${path.module}/response/deny_access.html")
-      content_type      = "text/html"
-      name              = "Deny access (403) and link to welcome.ffxblue.com.au"
-      request_condition = "Auth Cookie not set on non-www"
-      response          = "Forbidden"
-      status            = 403
-    }
   }
 
   ###########################################################
@@ -267,49 +219,6 @@ resource "fastly_service_v1" "www" {
     xff              = "append"
   }
 
-  ###########################################################
-
-  s3logging {
-    bucket_name        = "infrastructure-logging-cdn.apse2.ffx.io"
-    domain             = "s3-ap-southeast-2.amazonaws.com"
-    format             = "${module.logging.access_log}"
-    format_version     = 2
-    gzip_level         = 0
-    message_type       = "blank"
-    name               = "S3-logging"
-    path               = "/fastly/${var.fastly-service-name}/${terraform.workspace}/access/"
-    period             = 15
-    redundancy         = "standard"
-    s3_access_key      = var.logging_aws_access_key
-    s3_secret_key      = var.logging_aws_secret_key
-    timestamp_format   = "%Y-%m-%dT%H:%M:%S.000"
-    response_condition = "fastly_edge"
-  }
-
-  dynamic "s3logging" {
-    for_each = var.has_waf ? [1] : []
-
-    content {
-      bucket_name        = "infrastructure-logging-cdn.apse2.ffx.io"
-      domain             = "s3-ap-southeast-2.amazonaws.com"
-      format             = "${replace(file("${path.module}/log_format/nine-waflog.txt"), "\n", "")}"
-      format_version     = 2
-      gzip_level         = 9
-      message_type       = "blank"
-      name               = "Logging Endpoints (WAF)"
-      path               = "/fastly/render-web/production/waf/"
-      period             = 60
-      placement          = "waf_debug"
-      redundancy         = "standard_ia"
-      s3_access_key      = var.logging_aws_access_key
-      s3_secret_key      = var.logging_aws_secret_key
-      response_condition = "fastly_edge"
-      timestamp_format   = "%Y-%m-%dT%H:%M:%S.000"
-    }
-  }
-
-  ###########################################################
-
   dynamic "snippet" {
     for_each = var.serve_stale ? [1] : []
     content {
@@ -398,85 +307,15 @@ resource "fastly_service_v1" "www" {
       type     = "error"
     }
   }
-
-  ###########################################################
-
-  # Block clients that are in the "badbot" ACL.
-
-  acl { name = "badbot" }
-
-  condition {
-    name      = "badbot"
-    priority  = 10
-    statement = "req.http.Fastly-Client-IP ~ badbot"
-    type      = "REQUEST"
-  }
-
-  response_object {
-    content           = file("${path.module}/response/badbot.html")
-    content_type      = "text/html"
-    name              = "badbot"
-    request_condition = "badbot"
-    response          = "Rate Limit"
-    status            = 429
-  }
-
-  header {
-    action            = "set"
-    destination       = "http.ACL:badbot"
-    ignore_if_set     = false
-    name              = "badbot ACL"
-    priority          = 10
-    request_condition = "badbot"
-    source            = "req.http.Fastly-Client-IP"
-    type              = "request"
-  }
-
-  ###########################################################
-
-  dynamic "syslog" {
-    for_each = var.has_waf ? [1] : []
-
-    content {
-      address        = "104.197.173.239"
-      format         = "${replace(file("${path.module}/log_format/soc-weblogs.txt"), "\n", "")}"
-      format_version = 2
-      message_type   = "blank"
-      name           = "soc-weblogs"
-      port           = 9555
-      tls_ca_cert    = "-----BEGIN CERTIFICATE-----\nMIIEaTCCA1GgAwIBAgILBAAAAAABRE7wQkcwDQYJKoZIhvcNAQELBQAwVzELMAkG\nA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExEDAOBgNVBAsTB1Jv\nb3QgQ0ExGzAZBgNVBAMTEkdsb2JhbFNpZ24gUm9vdCBDQTAeFw0xNDAyMjAxMDAw\nMDBaFw0yNDAyMjAxMDAwMDBaMGYxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i\nYWxTaWduIG52LXNhMTwwOgYDVQQDEzNHbG9iYWxTaWduIE9yZ2FuaXphdGlvbiBW\nYWxpZGF0aW9uIENBIC0gU0hBMjU2IC0gRzIwggEiMA0GCSqGSIb3DQEBAQUAA4IB\nDwAwggEKAoIBAQDHDmw/I5N/zHClnSDDDlM/fsBOwphJykfVI+8DNIV0yKMCLkZc\nC33JiJ1Pi/D4nGyMVTXbv/Kz6vvjVudKRtkTIso21ZvBqOOWQ5PyDLzm+ebomchj\nSHh/VzZpGhkdWtHUfcKc1H/hgBKueuqI6lfYygoKOhJJomIZeg0k9zfrtHOSewUj\nmxK1zusp36QUArkBpdSmnENkiN74fv7j9R7l/tyjqORmMdlMJekYuYlZCa7pnRxt\nNw9KHjUgKOKv1CGLAcRFrW4rY6uSa2EKTSDtc7p8zv4WtdufgPDWi2zZCHlKT3hl\n2pK8vjX5s8T5J4BO/5ZS5gIg4Qdz6V0rvbLxAgMBAAGjggElMIIBITAOBgNVHQ8B\nAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4EFgQUlt5h8b0cFilT\nHMDMfTuDAEDmGnwwRwYDVR0gBEAwPjA8BgRVHSAAMDQwMgYIKwYBBQUHAgEWJmh0\ndHBzOi8vd3d3Lmdsb2JhbHNpZ24uY29tL3JlcG9zaXRvcnkvMDMGA1UdHwQsMCow\nKKAmoCSGImh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5uZXQvcm9vdC5jcmwwPQYIKwYB\nBQUHAQEEMTAvMC0GCCsGAQUFBzABhiFodHRwOi8vb2NzcC5nbG9iYWxzaWduLmNv\nbS9yb290cjEwHwYDVR0jBBgwFoAUYHtmGkUNl8qJUC99BM00qP/8/UswDQYJKoZI\nhvcNAQELBQADggEBAEYq7l69rgFgNzERhnF0tkZJyBAW/i9iIxerH4f4gu3K3w4s\n32R1juUYcqeMOovJrKV3UPfvnqTgoI8UV6MqX+x+bRDmuo2wCId2Dkyy2VG7EQLy\nXN0cvfNVlg/UBsD84iOKJHDTu/B5GqdhcIOKrwbFINihY9Bsrk8y1658GEV1BSl3\n30JAZGSGvip2CTFvHST0mdCF/vIhCPnG9vHQWe3WVjwIKANnuvD58ZAWR65n5ryA\nSOlCdjSXVWkkDoPWoC209fN5ikkodBpBocLTJIg1MGCUF7ThBCIxPTsvFwayuJ2G\nK1pp74P1S8SqtCr4fKGxhZSM9AyHDPSsQPhZSZg=\n-----END CERTIFICATE-----"
-      tls_hostname   = "soc-logging.service.secretcdn.net"
-      use_tls        = true
-    }
-  }
-
-  dynamic "syslog" {
-    for_each = var.has_waf ? [1] : []
-
-    content {
-      address        = "104.197.173.239"
-      format         = "${replace(file("${path.module}/log_format/soc-waflogs.txt"), "\n", "")}"
-      format_version = 2
-      message_type   = "blank"
-      name           = "soc-waflogs"
-      placement      = "waf_debug"
-      port           = 9556
-      tls_ca_cert    = "-----BEGIN CERTIFICATE-----\nMIIEaTCCA1GgAwIBAgILBAAAAAABRE7wQkcwDQYJKoZIhvcNAQELBQAwVzELMAkG\nA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExEDAOBgNVBAsTB1Jv\nb3QgQ0ExGzAZBgNVBAMTEkdsb2JhbFNpZ24gUm9vdCBDQTAeFw0xNDAyMjAxMDAw\nMDBaFw0yNDAyMjAxMDAwMDBaMGYxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i\nYWxTaWduIG52LXNhMTwwOgYDVQQDEzNHbG9iYWxTaWduIE9yZ2FuaXphdGlvbiBW\nYWxpZGF0aW9uIENBIC0gU0hBMjU2IC0gRzIwggEiMA0GCSqGSIb3DQEBAQUAA4IB\nDwAwggEKAoIBAQDHDmw/I5N/zHClnSDDDlM/fsBOwphJykfVI+8DNIV0yKMCLkZc\nC33JiJ1Pi/D4nGyMVTXbv/Kz6vvjVudKRtkTIso21ZvBqOOWQ5PyDLzm+ebomchj\nSHh/VzZpGhkdWtHUfcKc1H/hgBKueuqI6lfYygoKOhJJomIZeg0k9zfrtHOSewUj\nmxK1zusp36QUArkBpdSmnENkiN74fv7j9R7l/tyjqORmMdlMJekYuYlZCa7pnRxt\nNw9KHjUgKOKv1CGLAcRFrW4rY6uSa2EKTSDtc7p8zv4WtdufgPDWi2zZCHlKT3hl\n2pK8vjX5s8T5J4BO/5ZS5gIg4Qdz6V0rvbLxAgMBAAGjggElMIIBITAOBgNVHQ8B\nAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4EFgQUlt5h8b0cFilT\nHMDMfTuDAEDmGnwwRwYDVR0gBEAwPjA8BgRVHSAAMDQwMgYIKwYBBQUHAgEWJmh0\ndHBzOi8vd3d3Lmdsb2JhbHNpZ24uY29tL3JlcG9zaXRvcnkvMDMGA1UdHwQsMCow\nKKAmoCSGImh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5uZXQvcm9vdC5jcmwwPQYIKwYB\nBQUHAQEEMTAvMC0GCCsGAQUFBzABhiFodHRwOi8vb2NzcC5nbG9iYWxzaWduLmNv\nbS9yb290cjEwHwYDVR0jBBgwFoAUYHtmGkUNl8qJUC99BM00qP/8/UswDQYJKoZI\nhvcNAQELBQADggEBAEYq7l69rgFgNzERhnF0tkZJyBAW/i9iIxerH4f4gu3K3w4s\n32R1juUYcqeMOovJrKV3UPfvnqTgoI8UV6MqX+x+bRDmuo2wCId2Dkyy2VG7EQLy\nXN0cvfNVlg/UBsD84iOKJHDTu/B5GqdhcIOKrwbFINihY9Bsrk8y1658GEV1BSl3\n30JAZGSGvip2CTFvHST0mdCF/vIhCPnG9vHQWe3WVjwIKANnuvD58ZAWR65n5ryA\nSOlCdjSXVWkkDoPWoC209fN5ikkodBpBocLTJIg1MGCUF7ThBCIxPTsvFwayuJ2G\nK1pp74P1S8SqtCr4fKGxhZSM9AyHDPSsQPhZSZg=\n-----END CERTIFICATE-----"
-      tls_hostname   = "soc-logging.service.secretcdn.net"
-      use_tls        = true
-    }
-  }
-
-  ###########################################################
 }
 
 
-output "urls" {
-  value = {
-    for site in keys(var.sites) :
-    site => {
-      "admin"   = "https://manage.fastly.com/configure/services/${fastly_service_v1.www[site].id}/versions/${fastly_service_v1.www[site].active_version}"
-      "domains" = [for key in flatten([var.sites[site].domains, "${site}-${terraform.workspace}.ffxblue.com.au"]) : "https://${key}"]
-    }
-  }
-}
+# output "urls" {
+#   value = {
+#     for site in keys(var.sites) :
+#     site => {
+#       "admin"   = "https://manage.fastly.com/configure/services/${fastly_service_v1.www[site].id}/versions/${fastly_service_v1.www[site].active_version}"
+#       "domains" = [for key in flatten([var.sites[site].domains, "${site}-${terraform.workspace}.ffxblue.com.au"]) : "https://${key}"]
+#     }
+#   }
+# }
