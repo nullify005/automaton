@@ -1,0 +1,22 @@
+Configuration.new do
+  apply_nesting 'deep'
+  processing true
+  options do
+    on_failure 'nothing'
+    notification_topics []
+    capabilities ['CAPABILITY_IAM']
+    tags do
+      creator ENV['USER']
+    end
+  end
+  credentials do
+    provider :aws
+    aws_region ENV['AWS_REGION']
+    aws_profile_name ENV['AWS_PROFILE']
+  end
+  sparkle_pack [
+    'infrastructure-sparkle-pack-aws-ecr',
+    'infrastructure-sparkle-pack-aws-utils',
+    'infrastructure-sparkle-pack-aws-s3'
+  ]
+end

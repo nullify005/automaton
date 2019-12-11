@@ -1,0 +1,8 @@
+source 'https://rubygems.org'
+source 'https://gem.fury.io/fairfaxblue/'
+
+gem 'sfn'
+gem 'infrastructure-sparkle-pack-aws-ecr'
+gem 'infrastructure-sparkle-pack-aws-s3', '4.4.0'
+gem 'infrastructure-sparkle-pack-aws-utils'
+gem 'infrastructure-sparkle-pack-aws-sqs'

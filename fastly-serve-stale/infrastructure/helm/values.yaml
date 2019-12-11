@@ -1,0 +1,28 @@
+deploy:
+  app:
+    replicaCount: 3
+    revisionHistoryLimit: 5
+    deployEnabled: true
+    image:
+      repository: 457615832131.dkr.ecr.ap-southeast-2.amazonaws.com/infrastructure/fastly-serve-stale
+      tag: 5
+    probeLivenessInitialDelaySeconds: 30
+    probeLivenessPeriodSeconds: 30
+    probePath: /internal/health
+    internalPort: 80
+    probeReadinessInitialDelaySeconds: 0
+    probeReadinessPeriodSeconds: 10
+    serviceEnabled: true
+    service:
+      ingressPort: 80
+      #internalPort: 80
+      ports:
+        app: 80
+    ingress:
+      external:
+        host:
+          - fastly-serve-stale-test-v1.playpen.ffxblue.io
+          - fastly-serve-stale-test-v1.cdn.9pub.io
+        annotations:
+          kubernetes.io/ingress.class: external
+        #servicePort: 8080

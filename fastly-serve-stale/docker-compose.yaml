@@ -1,0 +1,11 @@
+version: "3.7"
+services:
+    nginx:
+        build: .
+        ports:
+            - 80:80
+        #volumes:
+        #    - ./pipeline/:/usr/share/logstash/pipeline/
+        #environment:
+        #    - AWS_ACCESS_KEY_ID=xxx
+        #    - AWS_SECRET_ACCESS_KEY=xxx
