@@ -1,6 +1,7 @@
 include:
     - k8s
     - helm
+    - calicoctl
 
 kubernetes control init:
     cmd.run:
@@ -44,6 +45,14 @@ kubernetes calico config:
         - onlyif:
             - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "calico"
 
+kubernetes calico policies:
+    file.managed:
+        - name: /etc/kubernetes/network-policies.yaml
+        - source: salt://resources/network-policies.yaml
+        - template: jinja
+        - onlyif:
+            - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "calico"
+
 kubernetes calico apply:
     cmd.run:
         - name: |
@@ -54,6 +63,18 @@ kubernetes calico apply:
             - file: kubernetes calico config
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
+
+kubernetes network policy apply:
+    cmd.run:
+        - name: |
+            calicoctl apply -f /etc/kubernetes/network-policies.yaml
+        - onlyif:
+            - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "calico"
+        - require:
+            - cmd: calicoctl
+        - env:
+            - KUBECONFIG: /etc/kubernetes/admin.conf
+            - DATASTORE_TYPE: kubernetes
 
 #kubernetes run everywhere:
 #    cmd.run:
@@ -90,3 +111,6 @@ kubernetes KUBECONFIG bash:
         - text: |
             export KUBECONFIG=/etc/kubernetes/admin.conf
             source <(kubectl completion bash)
+            {%- if salt.pillar.get('k8s:network_fabric') == 'calico' %}
+            export DATASTORE_TYPE=kubernetes
+            {%- endif %}

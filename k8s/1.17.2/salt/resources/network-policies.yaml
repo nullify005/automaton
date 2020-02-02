@@ -1,0 +1,26 @@
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: egress-inet
+  namespace: default
+spec:
+  types:
+    - Egress
+  egress:
+    - action: Allow
+      protocol: ICMP
+      destination:
+        nets:
+        - 0.0.0.0/0
+    - action: Allow
+      protocol: UDP
+      destination:
+        ports:
+        - 53
+    - action: Allow
+      protocol: TCP
+      destination:
+        ports:
+        - 80
+        - 443
+    - action: Deny

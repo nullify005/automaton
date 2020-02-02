@@ -18,5 +18,9 @@ helm:
     sha256: fc75d62bafec2c3addc87b715ce2512820375ab812e6647dc724123b616586d6
     url: https://get.helm.sh/helm-v3.0.3-linux-amd64.tar.gz
     version: 3.0.3
+calicoctl:
+    sha256: 5b9a7d6bb7be9b6fa49875fe3ab1239a177c6856b1ea8566eb2afbc7064cd495
+    url: https://github.com/projectcalico/calicoctl/releases/download/v3.12.0/calicoctl-linux-amd64
+    version: 3.12.0
 dns:
     nameserver: 172.16.10.4
