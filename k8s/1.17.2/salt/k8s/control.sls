@@ -1,5 +1,5 @@
 include:
-    - kubelet
+    - k8s
     - helm
 
 kubernetes control init:
@@ -28,9 +28,6 @@ kubernetes flannel config:
 kubernetes flannel apply:
     cmd.run:
         - name: |
-            set -x
-            kubectl -n kube-system get pods | grep flannel && exit 0
-            set -e
             kubectl apply -f /etc/kubernetes/flannel.yaml
         - onlyif:
             - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "flannel"
@@ -50,9 +47,6 @@ kubernetes calico config:
 kubernetes calico apply:
     cmd.run:
         - name: |
-            set -x
-            kubectl -n kube-system get pods | grep calico && exit 0
-            set -e
             kubectl apply -f /etc/kubernetes/calico.yaml
         - onlyif:
             - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "calico"

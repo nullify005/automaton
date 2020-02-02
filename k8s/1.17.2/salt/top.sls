@@ -5,6 +5,6 @@ base:
     - ntp
     - shell
     - hostname
-    - kubelet
+    - k8s
   'control*':
-    - control
+    - k8s.control
