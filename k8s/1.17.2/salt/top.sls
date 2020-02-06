@@ -8,3 +8,5 @@ base:
     - k8s
   'control*':
     - k8s.control
+  'node*':
+    - k8s.kubelet

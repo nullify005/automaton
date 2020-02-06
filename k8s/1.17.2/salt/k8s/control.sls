@@ -2,6 +2,7 @@ include:
     - k8s
     - helm
     - calicoctl
+    - stern
 
 kubernetes control init:
     cmd.run:
@@ -101,7 +102,10 @@ kubernetes service accounts apply:
 kubernetes join token:
     cmd.run:
         - name: |
-            kubeadm token create --print-join-command
+            SCRIPT="{{ salt.pillar.get('k8s:join_script') }}"
+            mkdir -p `dirname ${SCRIPT}`
+            kubeadm token create --print-join-command | tee {{ salt.pillar.get('k8s:join_script') }}
+            chmod +x ${SCRIPT}
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
 

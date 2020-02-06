@@ -11,4 +11,6 @@ resolv conf:
     file.managed:
         - name: /etc/resolv.conf
         - contents: |
-            nameserver {{ salt.pillar.get('dns:nameserver') }}
+            {%- for n in salt.pillar.get('dns:nameserver') %}
+            nameserver {{ n }}
+            {%- endfor %}
