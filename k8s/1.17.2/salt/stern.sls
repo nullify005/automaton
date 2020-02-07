@@ -2,7 +2,7 @@ stern:
     cmd.run:
         - name: |
             set -x
-            /usr/local/bin/stern version | grep {{ salt.pillar.get('stern:version') }} && exit 0
+            /usr/local/bin/stern -v | grep {{ salt.pillar.get('stern:version') }} && exit 0
             set -e
             WORKDIR=$(mktemp)
             rm -rf ${WORKDIR}

@@ -8,5 +8,8 @@ base:
     - k8s
   'control*':
     - k8s.control
+    - helm
+    - calicoctl
+    - stern
   'node*':
     - k8s.kubelet

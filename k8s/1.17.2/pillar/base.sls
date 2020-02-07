@@ -17,10 +17,15 @@ k8s:
     apiserver_address: 192.168.56.10
     network_fabric: flannel
     join_script: /srv/salt/tmp/join.sh
+    local_storage_path: /var/lib/LocalPersistentVolumes
 helm:
-    sha256: fc75d62bafec2c3addc87b715ce2512820375ab812e6647dc724123b616586d6
-    url: https://get.helm.sh/helm-v3.0.3-linux-amd64.tar.gz
-    version: 3.0.3
+    # this is helm 3
+    # sha256: fc75d62bafec2c3addc87b715ce2512820375ab812e6647dc724123b616586d6
+    # url: https://get.helm.sh/helm-v3.0.3-linux-amd64.tar.gz
+    # version: 3.0.3
+    url: https://get.helm.sh/helm-v2.16.1-linux-amd64.tar.gz
+    sha256: 7eebaaa2da4734242bbcdced62cc32ba8c7164a18792c8acdf16c77abffce202
+    version: v2.16.1
 calicoctl:
     sha256: 5b9a7d6bb7be9b6fa49875fe3ab1239a177c6856b1ea8566eb2afbc7064cd495
     url: https://github.com/projectcalico/calicoctl/releases/download/v3.12.0/calicoctl-linux-amd64

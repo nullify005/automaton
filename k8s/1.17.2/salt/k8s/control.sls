@@ -1,8 +1,5 @@
 include:
     - k8s
-    - helm
-    - calicoctl
-    - stern
 
 kubernetes control init:
     cmd.run:
@@ -98,6 +95,21 @@ kubernetes service accounts apply:
             - KUBECONFIG: /etc/kubernetes/admin.conf
         - require:
             - file: kubernetes service accounts config
+
+kubernetes local storage config:
+    file.managed:
+        - name: /etc/kubernetes/local-volume-provisioner.yaml
+        - source: salt://resources/local-volume-provisioner.yaml
+        - template: jinja
+
+kubernetes local storage apply:
+    cmd.run:
+        - name: |
+            kubectl apply -f /etc/kubernetes/local-volume-provisioner.yaml
+        - env:
+            - KUBECONFIG: /etc/kubernetes/admin.conf
+        - require:
+            - file: kubernetes local storage config
 
 kubernetes join token:
     cmd.run:
