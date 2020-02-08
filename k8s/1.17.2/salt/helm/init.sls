@@ -23,14 +23,35 @@ helm stable repo:
         - onlyif:
             - /usr/local/bin/helm version | grep -q v3.
 
+helm tiller rbac file:
+    file.managed:
+        - name: /etc/kubernetes/conf.d/tiller-rbac.yaml
+        - source: salt://helm/resources/service-account.yaml
+        - template: jinja
+        - makedirs: true
+
+helm tiller rbac apply:
+    cmd.run:
+        - name: |
+            ACTION=apply
+            /usr/local/bin/helm version | grep -q v3. && ACTION=delete
+            kubectl ${ACTION} -f /etc/kubernetes/conf.d/tiller-rbac.yaml
+        - env:
+            - KUBECONFIG: /etc/kubernetes/admin.conf
+        - require:
+            - file: helm tiller rbac file
+
 helm init:
     cmd.run:
         - name: |
+            set -e
             helm init --service-account=tiller
-            helm plugin install https://github.com/mstrzele/helm-edit
+            # helm plugin install https://github.com/mstrzele/helm-edit
             helm repo add elastic https://helm.elastic.co
+        - env:
+            - KUBECONFIG: /etc/kubernetes/admin.conf
         - require:
-            - cmd: helm
+            - cmd: helm tiller rbac apply
         - onlyif:
             - /usr/local/bin/helm version | grep -q v2.
 
@@ -59,6 +80,8 @@ helm init:
     helm install --namespace elasticsearch --name elasticsearch elastic/elasticsearch \
         --set esJavaOpts="-Xmx256m -Xms256m" --set persistence.enabled=false \
         --set resources='{ requests.memory: 512m,  limits.memory}'
+
+    helm install --namespace elasticsearch --name elasticsearch elastic/elasticsearch -f /srv/salt/helm/resources/elasticsearch-values.yaml
 
 requests.cpu: 1000m
 requests.memory: 2Gi

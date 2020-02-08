@@ -18,18 +18,19 @@ kubernetes control init:
 
 kubernetes flannel config:
     file.managed:
-        - name: /etc/kubernetes/flannel.yaml
+        - name: /etc/kubernetes/conf.d/flannel.yaml
         - source: salt://resources/kube-flannel.yaml
         - template: jinja
+        - makedirs: true
         - onlyif:
-            - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "flannel"
+            - test {{ salt.pillar.get('k8s:network_fabric') }} = flannel
 
 kubernetes flannel apply:
     cmd.run:
         - name: |
-            kubectl apply -f /etc/kubernetes/flannel.yaml
+            kubectl apply -f /etc/kubernetes/conf.d/flannel.yaml
         - onlyif:
-            - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "flannel"
+            - test {{ salt.pillar.get('k8s:network_fabric') }} = flannel
         - require:
             - file: kubernetes flannel config
         - env:
@@ -37,26 +38,26 @@ kubernetes flannel apply:
 
 kubernetes calico config:
     file.managed:
-        - name: /etc/kubernetes/calico.yaml
+        - name: /etc/kubernetes/conf.d/calico.yaml
         - source: salt://resources/calico.yaml
         - template: jinja
         - onlyif:
-            - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "calico"
+            - test {{ salt.pillar.get('k8s:network_fabric') }} = "calico"
 
 kubernetes calico policies:
     file.managed:
-        - name: /etc/kubernetes/network-policies.yaml
+        - name: /etc/kubernetes/conf.d/network-policies.yaml
         - source: salt://resources/network-policies.yaml
         - template: jinja
         - onlyif:
-            - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "calico"
+            - test {{ salt.pillar.get('k8s:network_fabric') }} = "calico"
 
 kubernetes calico apply:
     cmd.run:
         - name: |
-            kubectl apply -f /etc/kubernetes/calico.yaml
+            kubectl apply -f /etc/kubernetes/conf.d/calico.yaml
         - onlyif:
-            - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "calico"
+            - test {{ salt.pillar.get('k8s:network_fabric') }} = "calico"
         - require:
             - file: kubernetes calico config
         - env:
@@ -65,11 +66,9 @@ kubernetes calico apply:
 kubernetes network policy apply:
     cmd.run:
         - name: |
-            calicoctl apply -f /etc/kubernetes/network-policies.yaml
+            calicoctl apply -f /etc/kubernetes/conf.d/network-policies.yaml
         - onlyif:
-            - test "{{ salt.pillar.get('k8s:network_fabric') }}" = "calico"
-        - require:
-            - cmd: calicoctl
+            - test {{ salt.pillar.get('k8s:network_fabric') }} = "calico"
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
             - DATASTORE_TYPE: kubernetes
@@ -83,14 +82,14 @@ kubernetes network policy apply:
 
 kubernetes service accounts config:
     file.managed:
-        - name: /etc/kubernetes/service-accounts.yaml
+        - name: /etc/kubernetes/conf.d/service-accounts.yaml
         - source: salt://resources/service-accounts.yaml
         - template: jinja
 
 kubernetes service accounts apply:
     cmd.run:
         - name: |
-            kubectl apply -f /etc/kubernetes/service-accounts.yaml
+            kubectl apply -f /etc/kubernetes/conf.d/service-accounts.yaml
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
         - require:
@@ -98,14 +97,14 @@ kubernetes service accounts apply:
 
 kubernetes local storage config:
     file.managed:
-        - name: /etc/kubernetes/local-volume-provisioner.yaml
+        - name: /etc/kubernetes/conf.d/local-volume-provisioner.yaml
         - source: salt://resources/local-volume-provisioner.yaml
         - template: jinja
 
 kubernetes local storage apply:
     cmd.run:
         - name: |
-            kubectl apply -f /etc/kubernetes/local-volume-provisioner.yaml
+            kubectl apply -f /etc/kubernetes/conf.d/local-volume-provisioner.yaml
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
         - require:
@@ -130,3 +129,4 @@ kubernetes KUBECONFIG bash:
             {%- if salt.pillar.get('k8s:network_fabric') == 'calico' %}
             export DATASTORE_TYPE=kubernetes
             {%- endif %}
+            export EDITOR=vim

@@ -1,9 +1,11 @@
 esJavaOpts: -Xmx256m -Xms256m
 resources:
     requests:
-        memory: 512m
+      cpu: "1000m"
+      memory: "512Mi"
     limits:
-        memory: 512m
+      cpu: "1000m"
+      memory: "512Mi"
 persistence:
     enabled: true
 volumeClaimTemplate:
@@ -11,4 +13,4 @@ volumeClaimTemplate:
     storageClassName: "local-storage"
     resources:
         requests:
-            storage 2Gi
+            storage: 2Gi

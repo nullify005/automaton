@@ -1,5 +1,6 @@
 base:
   '*':
+    - jq
     - dns
     - docker
     - ntp
@@ -7,9 +8,9 @@ base:
     - hostname
     - k8s
   'control*':
+    - calicoctl
     - k8s.control
     - helm
-    - calicoctl
     - stern
   'node*':
     - k8s.kubelet

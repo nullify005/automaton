@@ -17,7 +17,9 @@ k8s:
     apiserver_address: 192.168.56.10
     network_fabric: flannel
     join_script: /srv/salt/tmp/join.sh
-    local_storage_path: /var/lib/LocalPersistentVolumes
+    local_storage:
+        path: /var/lib/LocalPersistentVolumes
+        volumes: 3
 helm:
     # this is helm 3
     # sha256: fc75d62bafec2c3addc87b715ce2512820375ab812e6647dc724123b616586d6
@@ -36,5 +38,5 @@ stern:
     version: 1.11.0
 dns:
     nameserver:
-      - 172.16.130.190
-      - 172.16.10.3
+      - 172.16.10.4
+      # - 172.16.130.190

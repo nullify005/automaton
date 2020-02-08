@@ -12,8 +12,8 @@ metadata:
 data:
   storageClassMap: |
     local-storage:
-       hostDir: {{ salt.pillar.get('k8s:local_storage_path') }}
-       mountDir: {{ salt.pillar.get('k8s:local_storage_path') }}
+       hostDir: {{ salt.pillar.get('k8s:local_storage:path') }}
+       mountDir: {{ salt.pillar.get('k8s:local_storage:path') }}
        volumeMode: Filesystem
 ---
 apiVersion: apps/v1
@@ -58,7 +58,7 @@ spec:
               readOnly: true
             - mountPath: /dev
               name: provisioner-dev
-            - mountPath: {{ salt.pillar.get('k8s:local_storage_path') }}
+            - mountPath: {{ salt.pillar.get('k8s:local_storage:path') }}
               name: local-storage
               mountPropagation: "HostToContainer"
       volumes:
@@ -70,7 +70,7 @@ spec:
             path: /dev
         - name: local-storage
           hostPath:
-            path: {{ salt.pillar.get('k8s:local_storage_path') }}
+            path: {{ salt.pillar.get('k8s:local_storage:path') }}
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
