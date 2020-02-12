@@ -1,16 +1,43 @@
+# esJavaOpts: -Xmx256m -Xms256m
+# resources:
+#     requests:
+#       cpu: "1000m"
+#       memory: "512Mi"
+#     limits:
+#       cpu: "1000m"
+#       memory: "512Mi"
+# persistence:
+#     enabled: true
+# volumeClaimTemplate:
+#     accessModes: [ "ReadWriteOnce" ]
+#     # storageClassName: "local-storage"
+#     storageClassName: "gp2"
+#     resources:
+#         requests:
+#             storage: 2Gi
+# ---
 esJavaOpts: -Xmx256m -Xms256m
-resources:
-    requests:
-      cpu: "1000m"
-      memory: "512Mi"
-    limits:
-      cpu: "1000m"
-      memory: "512Mi"
 persistence:
-    enabled: true
+  enabled: true
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 1000m
+    memory: 512Mi
 volumeClaimTemplate:
-    accessModes: [ "ReadWriteOnce" ]
-    storageClassName: "local-storage"
-    resources:
-        requests:
-            storage: 2Gi
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: gp2
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: internal
+  path: /
+  hosts:
+    - elasticsearch.playpen-calico.ffxblue.io
+  tls: []

@@ -41,6 +41,7 @@ kubernetes calico config:
         - name: /etc/kubernetes/conf.d/calico.yaml
         - source: salt://resources/calico.yaml
         - template: jinja
+        - makedirs: true
         - onlyif:
             - test {{ salt.pillar.get('k8s:network_fabric') }} = "calico"
 
