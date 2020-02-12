@@ -14,5 +14,3 @@ calicoctl:
             chmod +x /usr/local/bin/calicoctl
             cd
             rm -rf ${WORKDIR}
-        - onlyif:
-            - test {{ salt.pillar.get('k8s:network_fabric') }} = "calico"
