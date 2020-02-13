@@ -127,7 +127,6 @@ kubernetes KUBECONFIG bash:
         - text: |
             export KUBECONFIG=/etc/kubernetes/admin.conf
             source <(kubectl completion bash)
-            {%- if salt.pillar.get('k8s:network_fabric') == 'calico' %}
-            export DATASTORE_TYPE=kubernetes
-            {%- endif %}
+            export CALICO_DATASTORE_TYPE=kubernetes
+            export CALICO_KUBECONFIG=${KUBECONFIG}
             export EDITOR=vim
