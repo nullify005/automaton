@@ -74,6 +74,29 @@ kubernetes network policy apply:
             - KUBECONFIG: /etc/kubernetes/admin.conf
             - DATASTORE_TYPE: kubernetes
 
+kubernetes kuberouter config:
+    file.managed:
+        - name: /etc/kubernetes/conf.d/kuberouter.yaml
+        - source: salt://resources/kubeadm-kuberouter-all-features.yaml
+        - template: jinja
+        - makedirs: true
+        - onlyif:
+            - test {{ salt.pillar.get('k8s:network_fabric') }} = kuberouter
+
+kubernetes kuberouter apply:
+    cmd.run:
+        - name: |
+            kubectl apply -f /etc/kubernetes/conf.d/kuberouter.yaml
+            kubectl -n kube-system delete ds kube-proxy
+            set +e
+            docker run --privileged -v /lib/modules:/lib/modules --net=host k8s.gcr.io/kube-proxy-amd64:v1.15.1 kube-proxy --cleanup
+        - onlyif:
+            - test {{ salt.pillar.get('k8s:network_fabric') }} = kuberouter
+        - require:
+            - file: kubernetes kuberouter config
+        - env:
+            - KUBECONFIG: /etc/kubernetes/admin.conf
+
 #kubernetes run everywhere:
 #    cmd.run:
 #        - name: |

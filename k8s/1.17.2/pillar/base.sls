@@ -15,12 +15,12 @@ k8s:
     pod_cidr: 10.244.0.0/16
     certificate_key: "64838732f9683ca4ae3e13d3d6504a2d9cfcb51da562d6bdb2f1f816a33dd86c"
     apiserver_address: 192.168.56.10
-    network_fabric: calico
+    network_fabric: kuberouter
     join_script: /srv/salt/tmp/join.sh
     kubectl_config: /srv/salt/tmp/kubectl.conf
     local_storage:
         path: /var/lib/LocalPersistentVolumes
-        volumes: 3
+        volumes: 6
 helm:
     # this is helm 3
     # sha256: fc75d62bafec2c3addc87b715ce2512820375ab812e6647dc724123b616586d6
