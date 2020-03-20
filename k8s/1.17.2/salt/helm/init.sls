@@ -48,6 +48,8 @@ helm init:
             helm init --service-account=tiller
             # helm plugin install https://github.com/mstrzele/helm-edit
             helm repo add elastic https://helm.elastic.co
+            helm repo add bitnami https://charts.bitnami.com/bitnami
+            helm repo add kubecost https://kubecost.github.io/cost-analyzer/
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
         - require:

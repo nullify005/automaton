@@ -121,6 +121,11 @@ kubernetes join token:
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
 
+kubernetes kubeconfig dump:
+    cmd.run:
+        - name: |
+            cp -vf /etc/kubernetes/admin.conf {{ salt.pillar.get('k8s:kubectl_config') }}
+
 kubernetes KUBECONFIG bash:
     file.append:
         - name: /root/.bashrc
