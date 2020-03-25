@@ -24,10 +24,13 @@ sfn-update:
 
 helm-install:
 		helm install ffxblue/blue-app --name $(KUBE_NAME) \
-			--namespace $(KUBE_NAME) --values helm/values.yaml
+			--namespace $(KUBE_NAME) --values helm/nginx.yaml
+		helm install ffxblue/varnish --name $(KUBE_NAME)-varnish \
+		  --namespace $(KUBE_NAME) --values helm/varnish.yaml
 
 helm-upgrade:
-		helm upgrade $(KUBE_NAME) ffxblue/blue-app -f helm/values.yaml
+		helm upgrade $(KUBE_NAME) ffxblue/blue-app -f helm/nginx.yaml
+		helm upgrade $(KUBE_NAME)-varnish ffxblue/varnish -f helm/varnish.yaml
 
 logtail:
 		stern -n $(KUBE_NAME) -t -s 5s fastly

@@ -25,27 +25,8 @@ if (beresp.status >= 500 && beresp.status < 600) {
 
   # Triggering an error explicitly here will drop the response
   # received from origin and move processing to ERROR.
-  error 503;
+  error beresp.status beresp.response;
 }
 
-# if the response has come from the static error origin then force the status of the
-# 50x page to be a 503, otherwise a 200 will bleed out to the client and we might cache it
-if (req.url ~ "^/50x/.*/50x\.html$" && beresp.backend.name ~ ".*F_static_error_origin$") {
-  set beresp.status = 503;
-}
-
-# If we DO like the response from the backend, make it available
-# beyond the fresh TTL by adding a stale TTL (you can also do this
-# using directives in the Cache-Control header)
-set beresp.ttl = 1s;
-set beresp.stale_while_revalidate = 0s;
+set beresp.stale_while_revalidate = 300s;
 set beresp.stale_if_error = 86400s;
-
-# Strip out any amazon headers
-if (beresp.backend.name ~ ".*F_static_error_origin$") {
-  unset beresp.http.x-amz-id-2;
-  unset beresp.http.x-amz-request-id;
-  unset beresp.http.x-amz-delete-marker;
-  unset beresp.http.x-amz-version-id;
-  unset beresp.http.server;
-}

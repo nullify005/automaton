@@ -23,8 +23,6 @@ if (obj.status >= 500 && obj.status < 600) {
 
   # At this point our only option is to construct an error response
   # that we can send to the browser
-  set obj.status = 503;
-  set obj.response = "Service unavailable";
   set obj.http.Content-Type = "text/html";
   synthetic {"
     <!DOCTYPE html>

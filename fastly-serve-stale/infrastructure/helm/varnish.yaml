@@ -1,0 +1,235 @@
+affinityEnabled: "true"
+config:
+  varnish.memory: "100M"
+  varnish.ncsa_format: "{\\\"method\\\": \\\"%m\\\",\\\"vhost\\\": \\\"%{Host}i\\\",\\\"path\\\": \\\"%U\\\",\\\"request_query\\\": \\\"%q\\\",\\\"request_proto\\\": \\\"%H\\\",\\\"bytes_sent\\\": \\\"%O\\\",\\\"bytes_received\\\": \\\"%I\\\",\\\"duration\\\": \\\"%D\\\",\\\"http_referrer\\\": \\\"%{Referer}i\\\",\\\"http_user_agent\\\": \\\"%{User-agent}i\\\",\\\"remote_addr\\\": \\\"%h\\\",\\\"remote_user\\\": \\\"%u\\\",\\\"request_id\\\": \\\"%{Varnish:vxid}x\\\",\\\"request_time\\\": \\\"%D\\\",\\\"status\\\": \\\"%s\\\",\\\"time\\\": \\\"%{%FT%T%z}t\\\",\\\"x-forward-for\\\": \\\"%{X-Forwarded-For}i\\\",\\\"varnish.header.X-Real-IP\\\": \\\"%{X-Real-IP}i\\\",\\\"varnish.ttfb\\\": \\\"%{Varnish:time_firstbyte}x\\\",\\\"varnish.cache\\\": \\\"%{Varnish:hitmiss}x\\\"}"
+  varnish.backend.address: "app.fastly-serve-stale"
+ingress:
+  external:
+    host: fastly-serve-stale-test-v1.playpen-calico.ffxblue.io
+    annotations:
+      kubernetes.io/ingress.class: external
+      ingress.kubernetes.io/server-alias: "fastly-serve-stale-test-v1.playpen-calico.ffxblue.io"
+enableMetrics: true
+image:
+  repository: fairfaxmedia/varnish-alpine-docker
+  tag: "5.2.0"
+  pullPolicy: IfNotPresent
+redirects:
+  permanent:
+    - from: "/index.html$"
+      to: "/"
+      sub: true
+replicaCount: 3
+resources:
+  limits:
+    cpu: "1"
+    memory: "128Mi"
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+revisionHistoryLimit: 5
+service:
+  annotations:
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "9131"
+    prometheus.io/scrape: "true"
+  probePath: /internal/health
+
+gomplateFile:
+  default.vcl.gotpl: |-
+    vcl 4.0;
+    import std;
+    import querystring;
+
+    {{- $redirects := (getenv "VARNISH_REDIRECTS" "false" ) }}
+    {{- if (not (eq $redirects "false")) }}
+    include "{{ getenv "VARNISH_REDIRECTS_FILE" }}";
+    {{ end -}}
+
+    backend default {
+      .host = "{{ getenv "VARNISH_BACKEND_ADDRESS" }}";
+      .port = "{{ getenv "VARNISH_BACKEND_PORT" "80" }}";
+      .probe = {
+        .url = "/internal/health";
+        .timeout = 15s;
+        .interval = 23s;
+        .window = 5;
+        .threshold = 3;
+        .initial = 2;
+      }
+    }
+
+    acl badguys {
+        "46.228.199.36";
+    }
+
+    sub vcl_init {
+        new query_whitelist = querystring.filter();
+        query_whitelist.add_regex("^match$");
+        query_whitelist.add_regex("^ignorePublicState$");
+        query_whitelist.add_regex("^pcrypt$");
+        query_whitelist.add_regex("^debug$");
+        query_whitelist.add_regex("^fixed$");
+        query_whitelist.add_regex("^page$");
+        query_whitelist.add_regex("^text$");
+        query_whitelist.add_regex("^commentId$");
+        query_whitelist.add_regex("^ffOverrides$");
+        query_whitelist.add_regex("^isGoogle$");
+        query_whitelist.add_regex("^error_code$");
+        query_whitelist.add_regex("^code$");
+        query_whitelist.add_regex("^email$");
+        query_whitelist.add_regex("^client_id$");
+        query_whitelist.add_regex("^redirect_uri$");
+        query_whitelist.add_regex("^response_type$");
+        query_whitelist.add_regex("^scope$");
+        query_whitelist.add_regex("^state$");
+    }
+
+    sub vcl_hit {
+        if (obj.ttl >= 0s) {
+            # normal hit
+            set req.http.grace = "normal hit";
+            return (deliver);
+        }
+        # We have no fresh fish. Lets look at the stale ones.
+        if (std.healthy(req.backend_hint)) {
+            # Backend is healthy.
+            if (obj.ttl + 10s > 0s) {
+                set req.http.grace = "normal(limited)";
+                return (deliver);
+            } else {
+                # No candidate for grace. Fetch a fresh object.
+                set req.http.grace = "none(fetch fresh)";
+                return(fetch);
+            }
+        } else {
+            # backend is sick - use full grace
+            if (obj.ttl + obj.grace > 0s) {
+                set req.http.grace = "full";
+                return (deliver);
+            } else {
+                # no graced object.
+                set req.http.grace = "miss";
+                return (fetch);
+            }
+        }
+    }
+
+    sub vcl_backend_response {
+        set beresp.grace = 12h;
+    }
+
+    sub vcl_recv {
+        call healthcheck;
+        call originfailuresimulation;
+        call normalise_url;
+        call mitigate_bad_access_attempts;
+        call purge_requests;
+        {{- if (not (eq $redirects "false")) }}
+        call process_redirects;
+        {{ end -}}
+        # intial state
+        set req.http.grace = "none";
+        if (req.http.Cookie) {
+            unset req.http.Cookie;
+        }
+    }
+
+    sub vcl_deliver {
+        # copy to resp so we can tell from the outside.
+        set resp.http.X-Varnish-Grace = req.http.grace;
+        unset resp.http.X-Powered-By;
+        unset resp.http.Server;
+        unset resp.http.Via;
+        unset resp.http.Age;
+        unset resp.http.x-orig-url;
+        unset resp.http.x-stripped-url;
+    }
+
+    sub vcl_backend_error {
+        call retry_on_50x;
+        set beresp.http.Content-Type = "text/html; charset=utf-8";
+        synthetic( {"<html><body><h1>Technical Difficulties</h1><p>We apologise, there was an error retrieving this page. Please try again later.</p></body></html>"} );
+        return (deliver);
+    }
+
+    sub vcl_synth {
+        if (resp.status == 301 || resp.status == 302) {
+            set resp.http.Location = resp.reason;
+            set resp.reason = "Moved";
+            return (deliver);
+        }
+    }
+
+    sub normalise_url {
+        set req.http.x-orig-url = req.url;
+        set req.http.x-stripped-url = querystring.remove(req.url);
+        set req.url = querystring.sort(query_whitelist.apply(req.url, mode = keep));
+    }
+
+    sub mitigate_bad_access_attempts {
+        if ( req.http.x-stripped-url ~ "%" || req.http.x-stripped-url ~ ";" ) {
+            return (synth(404, "Bad Client Request"));
+        }
+        if (std.ip(req.http.X-Real-IP, "0.0.0.0") ~ badguys) {
+            return (synth(404, "Bad client request"));
+        }
+        if (req.url ~ "^/internal/") {
+            return (synth(302, "/"));  # send back to the root
+        }
+    }
+
+    sub purge_requests {
+        if (req.method == "PURGE") {
+            # If we get a request with the X-Real-IP header set, it originated outside the cluster.
+            if ( req.http.X-Real-IP ) {
+                return(synth(405,"Not allowed."));
+            }
+            return (purge);
+        }
+    }
+
+    sub healthcheck {
+        if (req.url ~ "^/internal/health$") {
+            return (synth(200, "OK"));
+        }
+    }
+
+    # Simulate origin failures for CDN configuration testing
+    # support querystring or header based activation
+    sub originfailuresimulation {
+        if (req.url ~ "\?debug=") {
+          set req.http.debug = regsub(req.url, "[^?]*\?debug=([-a-z0-9]+)\b.*", "\1");
+        }
+        if (req.http.debug == "originfailure-200") {
+            return (synth(200, "OK"));
+        }
+        if (req.http.debug == "originfailure-400") {
+            return (synth(400, "SIMULATED FAILURE 400"));
+        }
+        if (req.http.debug == "originfailure-404") {
+            return (synth(404, "SIMULATED FAILURE 404"));
+        }
+        if (req.http.debug == "originfailure-500") {
+            return (synth(500, "SIMULATED FAILURE 500"));
+        }
+        if (req.http.debug == "originfailure-502") {
+            return (synth(502, "SIMULATED FAILURE 502"));
+        }
+        if (req.http.debug == "originfailure-503") {
+            return (synth(503, "SIMULATED FAILURE 503"));
+        }
+        if (req.http.debug == "originfailure-504") {
+            return (synth(504, "SIMULATED FAILURE 504"));
+        }
+    }
+
+    sub retry_on_50x {
+        if (beresp.status == 500 || beresp.status == 502 || beresp.status == 503) {
+            if ( bereq.retries < 2 ) {
+                return(retry);
+            }
+        }
+    }
+
+    # END OF VCL.

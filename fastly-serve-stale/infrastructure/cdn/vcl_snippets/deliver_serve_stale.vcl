@@ -6,5 +6,5 @@
 # If it does, restarting the process here will disable clustering and
 # allow us to use the stale version in the edge server's cache.
 if (resp.status >= 500 && resp.status < 600 && stale.exists) {
-  restart;
+   restart;
 }

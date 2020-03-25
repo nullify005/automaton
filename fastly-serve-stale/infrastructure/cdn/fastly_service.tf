@@ -20,10 +20,10 @@ resource "fastly_service_v1" "www" {
       name                  = "${terraform.workspace} ${each.key}"
       address               = tostring(backend.value)
       auto_loadbalance      = false
-      between_bytes_timeout = 10000
+      between_bytes_timeout = 9000
       connect_timeout       = 1000
       error_threshold       = 0
-      first_byte_timeout    = 15000
+      first_byte_timeout    = 9000
       max_conn              = 200
       port                  = 80
       healthcheck           = "Varnish Health - ${each.key}"
@@ -31,6 +31,7 @@ resource "fastly_service_v1" "www" {
       # ssl_check_cert        = true
       use_ssl               = false
       weight                = 100
+      shield                = "sydney-au"
     }
   }
 
@@ -161,49 +162,23 @@ resource "fastly_service_v1" "www" {
     type              = "request"
   }
 
+
   ###########################################################
 
-  backend {
-    address               = "infrastructure-static-error-pages.apse2.ffx.io"
-    auto_loadbalance      = false
-    between_bytes_timeout = 10000
-    connect_timeout       = 1000
-    error_threshold       = 0
-    first_byte_timeout    = 15000
-    max_conn              = 200
-    name                  = "static error origin"
-    port                  = 80
-    request_condition     = "Path Match - begins with - 50x"
-    use_ssl               = false
-    weight                = 1000
-  }
-
   condition {
-    name      = "Path Match - begins with - 50x"
+    name      = "Serve static error page when no content available"
     priority  = 10
-    statement = "req.url ~ \"^/50x/\""
+    statement = "req.http.serve-static-error"
     type      = "REQUEST"
   }
 
-  header {
-    action            = "set"
-    destination       = "http.Host"
-    ignore_if_set     = false
-    name              = "infrastructure-static-error-pages.apse2.ffx.io Host"
-    priority          = 10
-    request_condition = "Path Match - begins with - 50x"
-    source            = "\"infrastructure-static-error-pages.apse2.ffx.io\""
-    type              = "request"
-  }
-
-  # Set the error path in a header specific to the service
-  header {
-    action      = "set"
-    destination = "http.serve-static-error-path"
-    name        = "Static Error Page Path"
-    priority    = 10
-    source      = "\"${tostring(var.sites["${each.key}"].static_error_path)}\""
-    type        = "request"
+  response_object {
+    content           = file("${path.module}/response/error.html")
+    content_type      = "text/html"
+    name              = "Serve static error page when no content available"
+    request_condition = "Serve static error page when no content available"
+    response          = "Service Unavailable"
+    status            = 503
   }
 
   ###########################################################

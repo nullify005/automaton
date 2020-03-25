@@ -15,11 +15,4 @@ if (req.http.Fastly-FF) {
 if (req.restarts == 0) {
   unset req.http.restarts;
   unset req.http.serve-static-error;
-} elsif (req.http.serve-static-error) {
-  set req.http.restarts = req.restarts; # Use restart value for vary key
-  set req.http.Fastly-Force-Shield = "1"; # Re-enable clustering
-  set req.url = req.http.serve-static-error-path; # Which is set in the terraform per service (50x/smh/50x.html")
 }
-
-# clear this to prevent leakage to the client
-unset req.http.serve-static-error-path;
