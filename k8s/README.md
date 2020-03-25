@@ -14,3 +14,16 @@ Persistent Volumes can get stuck and these need to be almost manually cleared ou
 ```
 for n in `kubectl get nodes | grep -v master | grep -v ROLES | grep SchedulingDisabled | awk '{print $1}'`; do echo "===> draining: ${n}"; kubectl drain --delete-local-data --ignore-daemonsets --force --grace-period=30 --timeout=300s ${n}; done
 ```
+
+```
+kubectl config use-context blue-development
+kubectl create namespace telepresence-lwebb-development-v1
+kubectl -n telepresence-lwebb-development-v1 run -i -t psql --image=alpine:latest --restart=Never
+$>
+apk update
+apk install postgrsql-client
+psql -h infrastructure-database-development-pg-rds-01.ffxblue.com.au
+
+kubectl delete namespaces telepresence-lwebb-development-v1
+```
+

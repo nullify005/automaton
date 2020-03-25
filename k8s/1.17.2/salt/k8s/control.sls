@@ -45,6 +45,7 @@ kubernetes calico config:
         - onlyif:
             - test {{ salt.pillar.get('k8s:network_fabric') }} = "calico"
 
+{#
 kubernetes calico policies:
     file.managed:
         - name: /etc/kubernetes/conf.d/network-policies.yaml
@@ -52,6 +53,7 @@ kubernetes calico policies:
         - template: jinja
         - onlyif:
             - test {{ salt.pillar.get('k8s:network_fabric') }} = "calico"
+#}
 
 kubernetes calico apply:
     cmd.run:
@@ -64,6 +66,7 @@ kubernetes calico apply:
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
 
+{#
 kubernetes network policy apply:
     cmd.run:
         - name: |
@@ -73,11 +76,12 @@ kubernetes network policy apply:
         - env:
             - KUBECONFIG: /etc/kubernetes/admin.conf
             - DATASTORE_TYPE: kubernetes
+#}
 
 kubernetes kuberouter config:
     file.managed:
         - name: /etc/kubernetes/conf.d/kuberouter.yaml
-        - source: salt://resources/kubeadm-kuberouter-all-features.yaml
+        - source: salt://resources/kubeadm-kuberouter.yaml
         - template: jinja
         - makedirs: true
         - onlyif:
@@ -87,9 +91,9 @@ kubernetes kuberouter apply:
     cmd.run:
         - name: |
             kubectl apply -f /etc/kubernetes/conf.d/kuberouter.yaml
-            kubectl -n kube-system delete ds kube-proxy
-            set +e
-            docker run --privileged -v /lib/modules:/lib/modules --net=host k8s.gcr.io/kube-proxy-amd64:v1.15.1 kube-proxy --cleanup
+            # set +e
+            # kubectl -n kube-system delete ds kube-proxy
+            # docker run --privileged -v /lib/modules:/lib/modules --net=host k8s.gcr.io/kube-proxy-amd64:v1.15.1 kube-proxy --cleanup
         - onlyif:
             - test {{ salt.pillar.get('k8s:network_fabric') }} = kuberouter
         - require:

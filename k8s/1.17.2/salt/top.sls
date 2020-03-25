@@ -12,5 +12,6 @@ base:
     - k8s.control
     - helm
     - stern
+    - istio
   'node*':
     - k8s.kubelet

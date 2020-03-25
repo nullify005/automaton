@@ -41,3 +41,8 @@ dns:
     nameserver:
       - 172.16.10.4
       # - 172.16.130.190
+istio:
+    istioctl:
+        url: https://github.com/istio/istio/releases/download/1.5.0/istioctl-1.5.0-linux.tar.gz
+        sha256: e841c8858f7598351caaf6d7e6a67c4a43218f343629c67cf76db5d000c9df72
+        version: 1.5.0

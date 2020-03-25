@@ -9,7 +9,7 @@ stern:
             mkdir -p ${WORKDIR}
             cd ${WORKDIR}
             wget -q {{ salt.pillar.get('stern:url') }} -O stern
-            openssl sha256 stern
+            openssl sha256 stern | grep {{ salt.pillar.get('stern:sha256') }}
             mv -vf stern /usr/local/bin/
             chmod +x /usr/local/bin/stern
             cd
