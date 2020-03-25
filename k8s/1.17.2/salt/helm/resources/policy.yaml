@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-c-input
+  namespace: a
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    # - Egress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            nsname: c
+  # egress:
+  #   - to:
+  #     - namespaceSelector:
+  #         matchLabels:
+  #           nsname: default
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-c-input
+  namespace: b
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    # - Egress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            nsname: c
+  # egress:
+  #   - to:
+  #     - namespaceSelector:
+  #         matchLabels:
+  #           nsname: default
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-c-input
+  namespace: alexey-playpen-v1
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    # - Egress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            nsname: c

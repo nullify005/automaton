@@ -1,0 +1,10 @@
+nameOverride: nginx
+fullnameOverride: nginx
+replicaCount: 3
+serverBlock: |-
+  server {
+    listen 0.0.0.0:8080;
+    location / {
+      return 200 "b $server_addr $remote_addr\n";
+    }
+  }

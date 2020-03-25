@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu-02
+  namespace: alexey-playpen-v1
+spec:
+  containers:
+  - name: ubuntu-02
+    image: ubuntu:bionic
+    command:
+      - sleep
+      - "7200"
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: ip-10-44-89-189.ap-southeast-2.compute.internal
