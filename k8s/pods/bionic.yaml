@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: http-testing-02
+  namespace: lwebb-http-testing-v1
+spec:
+  containers:
+  - name: http-testing-02
+    image: ubuntu:bionic
+    command:
+      - sleep
+      - "86400"
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+
