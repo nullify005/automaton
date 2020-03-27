@@ -1,3 +1,4 @@
 .vagrant
 *-cloudimg-console.log
 salt/tmp
+gpg/saltstack.key

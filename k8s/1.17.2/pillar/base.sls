@@ -1,3 +1,4 @@
+#!jinja|yaml|gpg
 domain: vagrant.local
 docker:
   version: 18.06.2~ce~3-0~ubuntu
@@ -42,7 +43,7 @@ dns:
     - 172.16.10.4
     # - 172.16.130.190
 istio:
-  enabled: false
+  enabled: true
   namespace: istio-system
   istioctl:
     url: https://github.com/istio/istio/releases/download/1.5.0/istioctl-1.5.0-linux.tar.gz
@@ -54,5 +55,18 @@ ingress:
     ippool: 192.168.56.100/32
 flagger:
   slack:
-    webhook: https://hooks.slack.com/services/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
+    webhook: |
+      -----BEGIN PGP MESSAGE-----
+
+      hQEMA1y+MEtQPyP7AQf/aRrYPr0H2s4jtZp2yphjuPdFeHHK88oHRvvYYNM+pmSa
+      vg7JN9v+ZRIlIGwvl9BlXQdcDp1fbAEDjWqza4/aHPsfirGq5fzO2/EuxWrL5gXa
+      ffF2i8bxCWOknN9Ws7GHT57uqWESZdxN+Hs5URuU2bjfrCnJdv7eIVOEgP67jhK9
+      fXqvb+QCMEkwbsTdxSB1rHNH4sBFoieq/SxVBlv1szOZwoUFU1xyuellYOSErfJz
+      G2HaKZgqHHtTKcefSopKsak8I4l+dGSzPujeOaykFzUq6810Q5ovEaDP5eWjTfez
+      T/yJNMc+gcCn2KSeihO7cicX6YeldDZ5A9Pi0d25D9KKAdbBJzio1UAUjcdp7qd3
+      EX2hQKYrNDxIm7SlVUDsJPnNtegm6acYQ8y8Wtwp4avl8jYz4rCpSHefaFpgxNnT
+      V5JKbHUXi2KdF0zra5ejNbFFIMWa7GRYpHYVyt7ep/XOku1vCaEATkpxYYTNMnjO
+      tmN1U974d8gPTay8UB3C4x7KTEMOid7rFUAk
+      =/SGJ
+      -----END PGP MESSAGE-----
     channel: "#tech-alerts-canary"
