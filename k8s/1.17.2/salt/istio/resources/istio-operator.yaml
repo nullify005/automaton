@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ salt.pillar.get('istio:namespace') }}
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: {{ salt.pillar.get('istio:namespace') }}
+  name: example-istiocontrolplane
+spec:
+  profile: demo
+---

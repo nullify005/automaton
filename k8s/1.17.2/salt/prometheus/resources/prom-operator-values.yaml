@@ -1,0 +1,14 @@
+prometheus:
+  ingress:
+    enabled: true
+    hosts:
+      - prometheus.vagrant.local
+    annotations:
+      kubernetes.io/ingress.class: nginx
+grafana:
+  ingress:
+    enabled: true
+    hosts:
+      - grafana.vagrant.local
+    annotations:
+      kubernetes.io/ingress.class: nginx

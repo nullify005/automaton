@@ -9,9 +9,12 @@ base:
     - k8s
   'control*':
     - calicoctl
+    - stern
     - k8s.control
     - helm
-    - stern
     - istio
+    - ingress
+    - flagger
+    #- prometheus
   'node*':
     - k8s.kubelet

@@ -1,94 +1,57 @@
-{% from 'macros.sls' import has_tiller with context %}
+{% from 'macros.sls' import has_tiller,kubeconfig with context %}
 
 helm:
-    cmd.run:
-        - name: |
-            set -x
-            /usr/local/bin/helm version | grep {{ salt.pillar.get('helm:version') }} && exit 0
-            set -e
-            WORKDIR=$(mktemp)
-            rm -rf ${WORKDIR}
-            mkdir -p ${WORKDIR}
-            cd ${WORKDIR}
-            wget -q {{ salt.pillar.get('helm:url') }} -O helm.tar.gz
-            openssl sha256 helm.tar.gz | grep {{ salt.pillar.get('helm:sha256') }}
-            tar -zxvf helm.tar.gz
-            find . -name helm -exec mv {} /usr/local/bin/ \;
-            cd
-            rm -rf ${WORKDIR}
+  cmd.run:
+    - name: |
+        set -x
+        /usr/local/bin/helm version | grep {{ salt.pillar.get('helm:version') }} && exit 0
+        set -e
+        WORKDIR=$(mktemp)
+        rm -rf ${WORKDIR}
+        mkdir -p ${WORKDIR}
+        cd ${WORKDIR}
+        wget -q {{ salt.pillar.get('helm:url') }} -O helm.tar.gz
+        openssl sha256 helm.tar.gz | grep {{ salt.pillar.get('helm:sha256') }}
+        tar -zxvf helm.tar.gz
+        find . -name helm -exec mv {} /usr/local/bin/ \;
+        cd
+        rm -rf ${WORKDIR}
 
 helm stable repo:
-    cmd.run:
-        - name: helm repo add stable https://kubernetes-charts.storage.googleapis.com
-        - require:
-            - cmd: helm
-        - onlyif:
-            - /usr/local/bin/helm version | grep -q v3.
+  cmd.run:
+    - name: helm repo add stable https://kubernetes-charts.storage.googleapis.com
+    - require:
+      - cmd: helm
+    - onlyif:
+        - /usr/local/bin/helm version | grep -q v3.
 
 helm tiller rbac file:
-    file.managed:
-        - name: /etc/kubernetes/conf.d/tiller-rbac.yaml
-        - source: salt://helm/resources/service-account.yaml
-        - template: jinja
-        - makedirs: true
+  file.managed:
+    - name: /etc/kubernetes/conf.d/tiller-rbac.yaml
+    - source: salt://helm/resources/service-account.yaml
+    - template: jinja
+    - makedirs: true
 
 helm tiller rbac apply:
-    cmd.run:
-        - name: |
-            ACTION=apply
-            /usr/local/bin/helm version | grep -q v3. && ACTION=delete
-            kubectl ${ACTION} -f /etc/kubernetes/conf.d/tiller-rbac.yaml
-        - env:
-            - KUBECONFIG: /etc/kubernetes/admin.conf
-        - require:
-            - file: helm tiller rbac file
+  cmd.run:
+    - name: |
+        ACTION=apply
+        /usr/local/bin/helm version | grep -q v3. && ACTION=delete
+        kubectl ${ACTION} -f /etc/kubernetes/conf.d/tiller-rbac.yaml
+    {{ kubeconfig() | indent(4) }}
+    - require:
+        - file: helm tiller rbac file
 
 helm init:
-    cmd.run:
-        - name: |
-            set -e
-            helm init --service-account=tiller
-            # helm plugin install https://github.com/mstrzele/helm-edit
-            helm repo add elastic https://helm.elastic.co
-            helm repo add bitnami https://charts.bitnami.com/bitnami
-            helm repo add kubecost https://kubecost.github.io/cost-analyzer/
-        - env:
-            - KUBECONFIG: /etc/kubernetes/admin.conf
-        - require:
-            - cmd: helm tiller rbac apply
-        - onlyif:
-            - /usr/local/bin/helm version | grep -q v2.
-
-nginx ingress:
-    cmd.run:
-        - name: |
-            helm install --namespace nginx-ingress --name nginx-ingress stable/nginx-ingress
-        - env:
-            - KUBECONFIG: /etc/kubernetes/admin.conf
-        - unless:
-            - helm status nginx-ingress
-        - onlyif:
-            - {{ has_tiller() }}
-
-metallb values:
-    file.managed:
-        - name: /etc/kubernetes/conf.d/metallb-values.yaml
-        - source: salt://helm/resources/metallb-values.yaml
-
-metallb ingress:
-    cmd.run:
-        - name: |
-            helm install --namespace kube-system --name metallb stable/metallb \
-              --values /etc/kubernetes/conf.d/metallb-values.yaml
-        - env:
-            - KUBECONFIG: /etc/kubernetes/admin.conf
-        - require:
-            - file: metallb values
-        - unless:
-            - helm status metallb
-        - onlyif:
-            - {{ has_tiller() }}
-
+  cmd.run:
+    - name: |
+        set -e
+        helm init --service-account=tiller
+    {{ kubeconfig() | indent(4) }}
+    - require:
+        - cmd: helm tiller rbac apply
+    - onlyif:
+        - /usr/local/bin/helm version | grep -q v2.
 
 {#
     kubectl create namespace postgres01
