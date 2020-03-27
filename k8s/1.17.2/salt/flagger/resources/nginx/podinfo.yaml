@@ -1,0 +1,9 @@
+ingress:
+  enabled: false
+image:
+  tag: 3.1.0
+replicaCount: 2
+service:
+  enabled: {% if salt.pillar.get('istio:enabled') %}false{% else %}true{% endif %}
+hpa:
+  enabled: true

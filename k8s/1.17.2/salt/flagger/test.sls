@@ -1,27 +1,39 @@
-{% from 'macros.sls' import kubeconfig with context %}
+{% from 'macros.sls' import kubeconfig,istio_enabled with context %}
 
 include:
   - helm
 
-flagger test helm:
+flagger nginx test helm:
   file.managed:
     - name: /etc/kubernetes/conf.d/podinfo.yaml
-    - source: salt://flagger/resources/podinfo.yaml
+    - source: salt://flagger/resources/nginx/podinfo.yaml
     - template: jinja
+    - require_in:
+      - cmd: flagger nginx test namespace
+    - unless:
+      - {{ istio_enabled() }}
 
-flagger test ingress:
+flagger nginx test ingress:
   file.managed:
     - name: /etc/kubernetes/conf.d/podinfo-ingress.yaml
-    - source: salt://flagger/resources/podinfo-ingress.yaml
+    - source: salt://flagger/resources/nginx/podinfo-ingress.yaml
     - template: jinja
+    - require_in:
+      - cmd: flagger nginx test namespace
+    - unless:
+      - {{ istio_enabled() }}
 
-flagger test canary:
+flagger nginx test canary:
   file.managed:
     - name: /etc/kubernetes/conf.d/podinfo-canary.yaml
-    - source: salt://flagger/resources/podinfo-canary.yaml
+    - source: salt://flagger/resources/nginx/podinfo-canary.yaml
     - template: jinja
+    - require_in:
+      - cmd: flagger nginx test namespace
+    - unless:
+      - {{ istio_enabled() }}
 
-flagger test namespace:
+flagger nginx test namespace:
   cmd.run:
     - runas: root
     - name: |
@@ -31,6 +43,28 @@ flagger test namespace:
         kubectl apply -f /etc/kubernetes/conf.d/podinfo-ingress.yaml
         kubectl apply -f /etc/kubernetes/conf.d/podinfo-canary.yaml
     {{ kubeconfig() | indent(4) }}
-    - require:
-      - file: flagger test helm
-      - file: flagger test canary
+    - unless:
+      - {{ istio_enabled() }}
+
+{# --------------- ISTIO ---------------- #}
+
+flagger istio test canary:
+  file.managed:
+    - name: /etc/kubernetes/conf.d/podinfo-canary.yaml
+    - source: salt://flagger/resources/istio/podinfo-canary.yaml
+    - template: jinja
+    - onlyif:
+      - {{ istio_enabled() }}
+
+flagger istio test namespace:
+  cmd.run:
+    - runas: root
+    - name: |
+        kubectl create ns test
+        kubectl label namespace test istio-injection=enabled
+        kubectl apply -k github.com/weaveworks/flagger//kustomize/podinfo
+        kubectl apply -k github.com/weaveworks/flagger//kustomize/tester
+        kubectl apply -f /etc/kubernetes/conf.d/podinfo-canary.yaml
+    {{ kubeconfig() | indent(4) }}
+    - onlyif:
+      - {{ istio_enabled() }}
