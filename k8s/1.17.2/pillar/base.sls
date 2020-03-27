@@ -43,7 +43,7 @@ dns:
     - 172.16.10.4
     # - 172.16.130.190
 istio:
-  enabled: true
+  enabled: false
   namespace: istio-system
   istioctl:
     url: https://github.com/istio/istio/releases/download/1.5.0/istioctl-1.5.0-linux.tar.gz

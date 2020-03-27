@@ -4,48 +4,64 @@ metadata:
   name: podinfo
   namespace: test
 spec:
-  provider: nginx
   # deployment reference
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: podinfo
-  # ingress reference
-  ingressRef:
-    apiVersion: extensions/v1beta1
-    kind: Ingress
-    name: podinfo
-  # HPA reference (optional)
-  # autoscalerRef:
-  #   apiVersion: autoscaling/v2beta1
-  #   kind: HorizontalPodAutoscaler
-  #   name: podinfo
   # the maximum time in seconds for the canary deployment
   # to make progress before it is rollback (default 600s)
   progressDeadlineSeconds: 60
+  # HPA reference (optional)
+  autoscalerRef:
+    apiVersion: autoscaling/v2beta1
+    kind: HorizontalPodAutoscaler
+    name: podinfo
   service:
-    # ClusterIP port number
+    # service port number
     port: 9898
-    # container port number or name
+    # container port number or name (optional)
     targetPort: 9898
+    # Istio gateways (optional)
+    gateways:
+    - public-gateway.istio-system.svc.cluster.local
+    # Istio virtual service host names (optional)
+    hosts:
+    - podinfo.vagrant.local
+    # Istio traffic policy (optional)
+    trafficPolicy:
+      tls:
+        # use ISTIO_MUTUAL when mTLS is enabled
+        mode: DISABLE
+    # Istio retry policy (optional)
+    retries:
+      attempts: 3
+      perTryTimeout: 1s
+      retryOn: "gateway-error,connect-failure,refused-stream"
   analysis:
     # schedule interval (default 60s)
-    interval: 10s
+    interval: 1m
     # max number of failed metric checks before rollback
-    threshold: 10
+    threshold: 5
     # max traffic percentage routed to canary
     # percentage (0-100)
     maxWeight: 50
     # canary increment step
     # percentage (0-100)
-    stepWeight: 5
-    # NGINX Prometheus checks
+    stepWeight: 10
     metrics:
     - name: request-success-rate
       # minimum req success rate (non 5xx responses)
       # percentage (0-100)
       thresholdRange:
         min: 99
+      interval: 1m
+    - name: latency
+      templateRef:
+        name: latency
+        namespace: istio-system
+      thresholdRange:
+        max: 500
       interval: 1m
     # testing (optional)
     webhooks:
@@ -60,4 +76,4 @@ spec:
         url: http://flagger-loadtester.test/
         timeout: 5s
         metadata:
-          cmd: "hey -z 1m -q 10 -c 2 http://podinfo.vagrant.local/"
+          cmd: "hey -z 1m -q 10 -c 2 http://podinfo-canary.test:9898/"
