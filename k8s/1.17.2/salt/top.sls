@@ -15,6 +15,6 @@ base:
     - istio
     - ingress
     - flagger
-    #- prometheus
+    - prometheus
   'node*':
     - k8s.kubelet
