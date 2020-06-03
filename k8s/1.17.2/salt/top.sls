@@ -16,5 +16,6 @@ base:
     - ingress
     - flagger
     - prometheus
+    - knative
   'node*':
     - k8s.kubelet

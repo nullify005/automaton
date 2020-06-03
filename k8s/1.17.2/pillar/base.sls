@@ -22,6 +22,11 @@ k8s:
   local_storage:
     path: /var/lib/LocalPersistentVolumes
     volumes: 6
+knative:
+  releases:
+    - "https://github.com/knative/serving/releases/download/v0.14.0/serving-crds.yaml"
+    - "https://github.com/knative/serving/releases/download/v0.14.0/serving-core.yaml"
+    - "https://github.com/knative/net-istio/releases/download/v0.14.0/release.yaml"
 helm:
   # this is helm 3
   # sha256: fc75d62bafec2c3addc87b715ce2512820375ab812e6647dc724123b616586d6

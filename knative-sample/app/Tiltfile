@@ -1,0 +1,5 @@
+allow_k8s_contexts('minikube')
+# Set Knative service as a Tilt workload
+k8s_kind('Service', api_version='serving.knative.dev/v1',image_json_path='{.spec.template.spec.containers[].image}')
+docker_build('dev.local/helloworld-python', '.')
+k8s_yaml('service.yaml')
